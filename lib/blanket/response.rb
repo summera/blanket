@@ -28,8 +28,11 @@ module Blanket
     end
 
     def payload_from_json(json)
-      [json].flatten.map { |item| RecursiveOpenStruct.new item, recurse_over_arrays: true }
-    end
+      parsed = [json].flatten.map do |item|
+        RecursiveOpenStruct.new item, recurse_over_arrays: true
+      end
 
+      (parsed.count == 1) ? parsed.first : parsed
+    end
   end
 end
