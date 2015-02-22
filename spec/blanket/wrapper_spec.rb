@@ -16,6 +16,14 @@ describe "Blanket::Wrapper" do
       expect(HTTParty).to have_received(:get).with("http://api.example.org/videos", anything())
     end
 
+    it 'allows full paths for uri construction' do
+      allow(HTTParty).to receive(:get) { StubbedResponse.new }
+
+      api.get('flexible/path')
+
+      expect(HTTParty).to have_received(:get).with("http://api.example.org/flexible/path", anything())
+    end
+
     describe "Response" do
       before :each do
         stub_request(:get, "http://api.example.org/users")
@@ -93,14 +101,14 @@ describe "Blanket::Wrapper" do
       it 'allows sending headers in a request' do
         api.users(55).get(headers: {foo: 'bar'})
 
-        expect(HTTParty).to have_received(:get).with('http://api.example.org/users/55', headers: {foo: 'bar'})
+        expect(HTTParty).to have_received(:get).with('http://api.example.org/users/55', headers: {"foo" => "bar"})
       end
 
       it 'allows setting headers globally' do
         api = Blanket::wrap("http://api.example.org", headers: {token: 'my secret token'})
         api.users(55).get()
 
-        expect(HTTParty).to have_received(:get).with('http://api.example.org/users/55', headers: {token: 'my secret token'})
+        expect(HTTParty).to have_received(:get).with('http://api.example.org/users/55', headers: {"token" => "my secret token"})
       end
     end
 
