@@ -58,6 +58,15 @@ module Blanket
     end
 
     def request(method, id=nil, options={})
+    def party_options(options={})
+      party_options = options.dup
+      party_options[:headers] = Blanket
+        .stringify_keys merged_headers(party_options.delete(:headers))
+
+      party_options[:query] = merged_params party_options.delete(:params)
+      party_options.reject { |_, value| value.nil? || value.empty? }
+    end
+
       if id.is_a? Hash
         options = id
         id = nil
