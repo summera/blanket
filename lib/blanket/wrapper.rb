@@ -72,8 +72,6 @@ module Blanket
         id = nil
       end
 
-      headers = Blanket.stringify_keys merged_headers(options[:headers])
-      params = merged_params(options[:params])
       uri = uri_from_parts([id])
 
       if @extension
