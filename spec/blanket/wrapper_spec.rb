@@ -39,6 +39,33 @@ describe "Blanket::Wrapper" do
       end
     end
 
+    # describe "Chunked Response" do
+    #   before :each do
+    #     # let :chunks do
+    #     #   ["Chunk1", "Chunk2", "Chunk3", "Chunk4"]
+    #     # end
+
+    #     stub_request(:get, "http://api.example.org/users")
+    #       .to_return(
+    #         :body => ["Chunk1", "Chunk2", "Chunk3", "Chunk4"],
+    #         :headers => {"Transfer-Encoding" => "chunked"}
+    #       )
+    #   end
+
+    #   it "returns response in chunks" do
+    #     binding.pry
+    #     api.users.get do |fragment|
+    #       puts fragment
+    #     end
+
+    #     expect(
+    #       api.users.get do |fragment|
+    #         expect(chunks).to include(fragment)
+    #       end.parsed_response
+    #     ).to eq(chunks.join)
+    #   end
+    # end
+
     describe "Exceptions" do
       let :api do
         Blanket::wrap("http://api.example.org")
