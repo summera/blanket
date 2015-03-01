@@ -11,8 +11,8 @@ module Blanket
       #   @param [Hash] options An options hash with values for :headers, :extension, :params and :body
       #   @return [Blanket::Response, Array] A wrapped Blanket::Response or an Array
       def add_action(action)
-        define_method(action) do |id=nil, options={}|
-          request(action, id, options)
+        define_method(action) do |id=nil, options={}, &block|
+          request(action, id, options, &block)
         end
       end
     end
@@ -57,7 +57,6 @@ module Blanket
       }
     end
 
-    def request(method, id=nil, options={})
     def party_options(options={})
       party_options = options.dup
       party_options[:headers] = Blanket
@@ -67,6 +66,7 @@ module Blanket
       party_options.reject { |_, value| value.nil? || value.empty? }
     end
 
+    def request(method, id=nil, options={}, &block)
       if id.is_a? Hash
         options = id
         id = nil
@@ -82,6 +82,8 @@ module Blanket
         method,
         uri,
         party_options(options),
+        &block
+      )
 
       if response.code <= 400
         body = (response.respond_to? :body) ? response.body : nil
