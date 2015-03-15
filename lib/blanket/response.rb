@@ -30,6 +30,5 @@ module Blanket
     def payload_from_json(json)
       [json].flatten.map { |item| RecursiveOpenStruct.new item, recurse_over_arrays: true }
     end
-
   end
 end

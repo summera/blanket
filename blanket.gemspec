@@ -19,6 +19,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "httparty"
   spec.add_dependency "recursive-open-struct"
+  spec.add_dependency "activesupport"
 
   spec.add_development_dependency "bundler"
   spec.add_development_dependency "rake", "~> 10.0"
@@ -32,4 +33,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "coveralls"
   spec.add_development_dependency "webmock"
   spec.add_development_dependency "yard"
+  spec.add_development_dependency "yajl-ruby"
+  spec.add_development_dependency "rest-client"
 end

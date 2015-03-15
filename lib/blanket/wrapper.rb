@@ -1,4 +1,5 @@
 require_relative "utils"
+require 'active_support/inflector'
 
 module Blanket
   class Wrapper
@@ -29,6 +30,8 @@ module Blanket
     # should be appended to all requests
     attr_accessor :extension
 
+    attr_accessor :adapter
+
     add_action :get
     add_action :post
     add_action :put
@@ -45,6 +48,7 @@ module Blanket
       @headers = options[:headers] || {}
       @params = options[:params] || {}
       @extension = options[:extension]
+      @adapter = options[:adapter] || :httparty
     end
 
     private
@@ -57,13 +61,18 @@ module Blanket
       }
     end
 
-    def party_options(options={})
-      party_options = options.dup
-      party_options[:headers] = Blanket
-        .stringify_keys merged_headers(party_options.delete(:headers))
+    def request_options(options={})
+      new_options = options.dup
+      new_options[:headers] = Blanket
+        .stringify_keys merged_headers(new_options.delete(:headers))
 
-      party_options[:query] = merged_params party_options.delete(:params)
-      party_options.reject { |_, value| value.nil? || value.empty? }
+      new_options[:params] = merged_params new_options.delete(:params)
+      new_options.reject { |_, value| value.nil? || value.empty? }
+    end
+
+    def classify_adapter
+      require_relative "adapters/#{adapter}"
+      Blanket::Adapters.const_get "#{adapter}".classify
     end
 
     def request(method, id=nil, options={}, &block)
@@ -78,19 +87,21 @@ module Blanket
         uri = "#{uri}.#{extension}"
       end
 
-      response = HTTParty.public_send(
+      classified_adapter = classify_adapter
+
+      classified_adapter.public_send(
         method,
         uri,
-        party_options(options),
+        request_options(options),
         &block
       )
 
-      if response.code <= 400
-        body = (response.respond_to? :body) ? response.body : nil
-        (body.is_a? Array) ? body.map(Response.new) : Response.new(body)
-      else
-        raise Blanket::Exceptions.generate_from_response(response)
-      end
+      # if response.code <= 400
+      #   body = (response.respond_to? :body) ? response.body : nil
+      #   (body.is_a? Array) ? body.map(Response.new) : Response.new(body)
+      # else
+      #   raise Blanket::Exceptions.generate_from_response(response)
+      # end
     end
 
     def merged_headers(headers)
