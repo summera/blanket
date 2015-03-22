@@ -5,7 +5,7 @@ module Blanket
   module Adapters
     class Yajl < Base
       def self.get(uri, options = {}, &block)
-        query = query_string options
+        query = query_string options[:params]
         uri = "#{uri}?#{query}" unless query.empty?
         ::Yajl::HttpStream.get uri, generate_options(options), &block
       end
