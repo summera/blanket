@@ -16,9 +16,7 @@ module Blanket
       end
 
       def self.generate_options(options = {})
-        new_options = options.dup
-        new_options.delete :params if options[:params]
-        new_options
+        options.except :params, :body
       end
     end
   end
