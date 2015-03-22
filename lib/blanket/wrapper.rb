@@ -67,7 +67,7 @@ module Blanket
         .stringify_keys merged_headers(new_options.delete(:headers))
 
       new_options[:params] = merged_params new_options.delete(:params)
-      new_options.reject { |_, value| value.nil? || value.empty? }
+      new_options.reject { |_, value| value.nil? || value.empty? unless [true, false].include?(value) }
     end
 
     def classify_adapter
