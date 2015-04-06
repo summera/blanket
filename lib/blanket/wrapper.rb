@@ -4,6 +4,20 @@ require 'active_support/inflector'
 module Blanket
   class Wrapper
     class << self
+      attr_accessor :after_requests,
+        :before_requests,
+        :background_actions
+
+      attr_reader :headers, :base_uri
+
+      def base(uri)
+        @base_uri = uri
+      end
+
+      def header(key, val)
+        @headers[key.to_s] = val
+      end
+
       private
       # @macro [attach] REST action
       #   @method $1()
@@ -17,6 +31,10 @@ module Blanket
         end
       end
     end
+
+    # Class instance var instantiation
+    @headers = {}
+    @base_uri = nil
 
     # Attribute accessor for HTTP Headers that
     # should be applied to all requests
@@ -32,6 +50,10 @@ module Blanket
 
     attr_accessor :adapter
 
+    attr_accessor :representer
+
+    attr_reader :path
+
     add_action :get
     add_action :post
     add_action :put
@@ -42,17 +64,18 @@ module Blanket
     # @param [String, Symbol] base_uri The root URL of the API you wish to wrap.
     # @param [Hash] options An options hash with global values for :headers, :extension and :params
     # @return [Blanket] The Blanket object wrapping the API
-    def initialize(base_uri, options={})
-      @base_uri = base_uri
+    def initialize(base_uri = '', options = {})
+      headers = options[:headers] || {}
+
+      @base_uri = self.class.base_uri || base_uri
       @uri_parts = []
-      @headers = options[:headers] || {}
+      @headers = self.class.headers.merge headers
       @params = options[:params] || {}
       @extension = options[:extension]
       @adapter = options[:adapter] || :httparty
     end
 
     private
-
     def method_missing(method, *args, &block)
       Wrapper.new uri_from_parts([method, args.first]), {
         headers: @headers,
