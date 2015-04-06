@@ -1,3 +1,4 @@
+require 'httparty'
 require_relative 'base'
 
 module Blanket

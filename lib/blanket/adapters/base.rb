@@ -1,4 +1,5 @@
 require 'blanket/response'
+require 'httparty'
 
 module Blanket
   module Adapters
