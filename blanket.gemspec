@@ -20,6 +20,9 @@ Gem::Specification.new do |spec|
   spec.add_dependency "httparty"
   spec.add_dependency "recursive-open-struct"
   spec.add_dependency "activesupport"
+  spec.add_dependency "representable"
+  spec.add_dependency "virtus", ">= 0.5.0"
+  spec.add_dependency "activejob"
 
   spec.add_development_dependency "bundler"
   spec.add_development_dependency "rake", "~> 10.0"
