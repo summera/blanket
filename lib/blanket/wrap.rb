@@ -153,7 +153,6 @@ module Blanket
         raise "Missing callback #{method}"
       end
 
-      binding.pry
 
       self.class.new @base_uri, {
         headers: @headers,
