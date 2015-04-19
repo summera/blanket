@@ -2,6 +2,7 @@ require 'blanket/wrap'
 require 'pry'
 
 Dir["#{File.dirname(__FILE__)}/representers/**/*.rb"].each { |f| load(f) }
+Dir["#{File.dirname(__FILE__)}/jobs/**/*.rb"].each { |f| load(f) }
 
 module Blanket
   module Test
@@ -13,14 +14,15 @@ module Blanket
       # param :per_page, 1
       # extension :json
       # adapter :yajl
-      # before_request :beforehand, :get
-      # after_request :afterwards, :get
+      before_request :beforehand, actions: [:get]
+      after_request :afterwards
 
-      # Default path is []
-      # Default actions are all
-      # representer WhatUp, path: [:v1, :groups]
-      # background BackgroundMe, path: [:v1, :groups], only: [:get]
-      # before_request :some_method, path: [:v1, :groups], only: [:get]
+      # Default path is ''
+      # Default actions are all actions
+
+      # representer V1::GroupRepresenter, path: '/v1/groups'
+      # background V1::GroupsJob, path: '/v1/groups'
+      # before_request :some_method, path: '/v1/groups', only: [:get]
 
       # Instantiate uri with base_uri + path when instantiating/delegating
       # Delegate to class when performing http action
