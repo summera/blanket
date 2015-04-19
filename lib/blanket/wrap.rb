@@ -128,6 +128,7 @@ module Blanket
       @adapter = options[:adapter] || self.class.base_adapter || :httparty
       @path = options[:path] || []
       @representer = options[:representer] || base_representer
+      @path = options[:path] || ''
     end
 
     private
