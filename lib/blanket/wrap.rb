@@ -220,15 +220,15 @@ module Blanket
       end
     end
 
+    def classify_adapter
+      require_relative "adapters/#{adapter}"
+      Blanket::Adapters.const_get "#{adapter}".classify
+    end
+
     def classification_path
       klassification_path = path.gsub(/\/(\d)+/, '')
       klassification_path = klassification_path.singularize if path =~ /\/(\d)+\/*$/
       klassification_path
-    end
-
-    def classify_adapter
-      require_relative "adapters/#{adapter}"
-      Blanket::Adapters.const_get "#{adapter}".classify
     end
 
     def classify_representer
