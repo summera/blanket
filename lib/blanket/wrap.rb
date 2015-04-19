@@ -41,9 +41,13 @@ module Blanket
       end
 
       def representer(klass, options = {})
-        path = options[:path] || []
-        actions = [:get, :post, :put, :delete]
-        self.base_representers[path] = { :representer => klass, :actions => actions }
+        request_path = options[:path] || ''
+        actions = options[:actions] || [:get, :post, :put, :delete]
+
+        actions.each do |action|
+          self.base_representers[request_path] ||= {}
+          self.base_representers[request_path][action] = klass
+        end
       end
 
       # def background_job(j)
@@ -126,8 +130,8 @@ module Blanket
       @params = self.class.base_params.merge options[:params] || {}
       @extension = options[:extension] || self.class.base_extension
       @adapter = options[:adapter] || self.class.base_adapter || :httparty
-      @representer = options[:representer] || base_representer
       @path = options[:path] || ''
+      @representer = options[:representer]
     end
 
     private
@@ -175,8 +179,14 @@ module Blanket
       end
     end
 
-    def base_representer
-      self.class.base_representers[path]
+    def base_representer(action)
+      self.class.base_representers.each do |path_string, config|
+        if path_match? path_string
+          return config[action]
+        end
+      end
+
+      nil
     end
 
     def request_options(options = {})
@@ -192,10 +202,10 @@ module Blanket
       end
     end
 
-    def classification_path(type)
-      temp_path = path.dup
-      temp_path[-1] = path.last.to_s.singularize.to_sym if type == :member
-      temp_path
+    def classification_path
+      klassification_path = path.gsub(/\/(\d)+/, '')
+      klassification_path = klassification_path.singularize if path =~ /\/(\d)+\/*$/
+      klassification_path
     end
 
     def classify_adapter
@@ -203,10 +213,10 @@ module Blanket
       Blanket::Adapters.const_get "#{adapter}".classify
     end
 
-    def classify_representer(type)
+    def classify_representer
       namespace = self.class.name.deconstantize
-      class_path = classification_path(type)
-      "#{namespace}::" << "#{class_path.join('/')}_representer".classify
+      class_path = classification_path
+      "#{namespace}#{class_path}_representer".classify
     end
 
     # def classify_active_job(type)
@@ -215,10 +225,10 @@ module Blanket
     #   "#{namespace}::" << "#{class_path.join('/')}_job".classify
     # end
 
-    def infer_representer(type)
-      representer_class = classify_representer type
-
+    def infer_representer
       inferred_representer = nil
+      representer_class = classify_representer
+
       if Object.const_defined? representer_class
         inferred_representer = representer_class.constantize
       end
@@ -266,6 +276,11 @@ module Blanket
           send action_callback[:callback], response, action
         end
       end
+    end
+
+    def path_match?(path_string)
+      regex = path_string.gsub(/:\w+/, '\w+')
+      Regexp.new(regex) === path
     end
 
     # def perform_in_background?(action, options = {})
