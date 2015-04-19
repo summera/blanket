@@ -1,6 +1,7 @@
 require_relative "utils"
 require 'active_support/inflector'
 require 'active_support/concern'
+require 'active_support/core_ext/object'
 
 module Blanket
   module Wrap
@@ -16,7 +17,7 @@ module Blanket
         :base_extension,
         :base_adapter,
         :base_representer,
-        :base_background_job,
+        :base_background_jobs,
         :base_representers
 
       def uri(u)
@@ -49,9 +50,15 @@ module Blanket
         end
       end
 
-      # def background_job(j)
-      #   @base_background_job = j
-      # end
+      def background(klass, options = {})
+        request_path = options[:path] || ''
+        actions = options[:actions] || [:get, :post, :put, :delete]
+
+        actions.each do |action|
+          self.base_background_jobs[request_path] ||= {}
+          self.base_background_jobs[request_path][action] = klass
+        end
+      end
 
       def before_request(method, options = {})
         request_path = options[:path] || ''
@@ -101,7 +108,7 @@ module Blanket
       @base_headers = {}
       @base_params = {}
       @base_representers = {}
-      @background_actions = []
+      @base_background_jobs = {}
       @before_requests = {}
       @after_requests = {}
 
@@ -162,7 +169,12 @@ module Blanket
     end
 
     def request(action, options = {}, &block)
-      # return push_to_background(action, options, &block) if perform_in_background? action, options
+      background = options[:background].nil? ? true : options[:background]
+
+      if background
+        job = base_job(action) || infer_job
+        return push_to_background(job, action, options, &block) if job
+      end
 
       execute_before_requests action
 
@@ -226,11 +238,11 @@ module Blanket
       "#{namespace}#{class_path}_representer".classify
     end
 
-    # def classify_active_job(type)
-    #   namespace = self.class.name.deconstantize
-    #   class_path = classification_path(type)
-    #   "#{namespace}::" << "#{class_path.join('/')}_job".classify
-    # end
+    def classify_job
+      namespace = self.class.name.deconstantize
+      class_path = classification_path
+      "#{namespace}#{class_path}_job".classify
+    end
 
     def infer_representer
       inferred_representer = nil
@@ -243,9 +255,16 @@ module Blanket
       inferred_representer
     end
 
-    # def infer_active_job(type)
-    #   classify_active_job(type).constantize
-    # end
+    def infer_job
+      inferred_job = nil
+      job_class = classify_job
+
+      if Object.const_defined? job_class
+        inferred_job = job_class.constantize
+      end
+
+      inferred_job
+    end
 
     def merged_headers(headers)
       @headers.merge(headers || {})
@@ -294,15 +313,19 @@ module Blanket
       Regexp.new(regex) === path
     end
 
-    # def perform_in_background?(action, options = {})
-    #   return options[:perform_in_background] if options.has_key? :perform_in_background
-    #   self.class.background_actions.include? action
-    # end
+    def base_job(action)
+      self.class.base_background_jobs.each do |path_string, config|
+        if path_match? path_string
+          return config[action]
+        end
+      end
 
-    # def push_to_background(action, id = nil, options = {}, &block)
-    #   # type = id ? :member : :collection
-    #   # IcontactJob.perform_later to_hash.to_json, action.to_s, id, options, &block
-    # end
+      nil
+    end
+
+    def push_to_background(job, action, options = {}, &block)
+      job.perform_later self.class.name, to_hash.to_json, action.to_s, options, &block
+    end
 
     def to_hash
       hash = {}
