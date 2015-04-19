@@ -8,8 +8,7 @@ module Blanket
 
     module ClassMethods
       attr_accessor :after_requests,
-        :before_requests,
-        :background_actions
+        :before_requests
 
       attr_reader :base_headers,
         :base_uri,
