@@ -64,14 +64,21 @@ module Blanket
 
       private
       # @macro [attach] REST action
-      #   @method $1()
+      #   @action $1()
       #   Performs a $1 request on the wrapped URL
       #   @param [String, Symbol, Numeric] id The resource identifier to attach to the last part of the request
       #   @param [Hash] options An options hash with values for :headers, :extension, :params and :body
       #   @return [Blanket::Response, Array] A wrapped Blanket::Response or an Array
       def add_action(action)
-        define_method(action) do |id=nil, options={}, &block|
-          request(action, id, options, &block)
+        define_method(action) do |id = nil, options = {}, &block|
+          if id.is_a? Hash
+            options = id
+            id = nil
+          end
+
+          @path = path_from_parts id
+
+          request action, options, &block
         end
       end
     end
@@ -135,46 +142,37 @@ module Blanket
 
       binding.pry
 
-      self.class.new uri_from_parts([method, args.first]), {
+      self.class.new @base_uri, {
         headers: @headers,
         extension: @extension,
         params: @params,
-        path: path.dup << method
+        path: path_from_parts(method, args.first)
       }
     end
 
-    def request(method, id = nil, options = {}, &block)
-      # return push_to_background(method, id, options, &block) if perform_in_background? method, options
+    def request(action, options = {}, &block)
+      # return push_to_background(action, options, &block) if perform_in_background? action, options
 
-      if id.is_a? Hash
-        options = id
-        id = nil
-      end
-
-      uri = uri_from_parts([id])
-
-      if @extension
-        uri = "#{uri}.#{extension}"
-      end
-
-      execute_before_requests method
+      execute_before_requests action
 
       response = classify_adapter.public_send(
-        method,
+        action,
         uri,
         request_options(options),
         &block
       )
 
-      type = id ? :member : :collection
-      response_representer = representer || infer_representer(type)
-      response = response_representer ?
-        response_representer.prepare(RecursiveOpenStruct.new(response, recurse_over_arrays: true)) :
+      if !block_given?
+        response_representer = representer || base_representer(action) || infer_representer
+
+        response = response_representer ?
+          response_representer.prepare(RecursiveOpenStruct.new(response, recurse_over_arrays: true)) :
+          response
+
+        execute_after_requests response, action
+
         response
-
-      execute_after_requests response, method
-
-      response
+      end
     end
 
     def base_representer
@@ -240,9 +238,18 @@ module Blanket
       @params.merge(params || {})
     end
 
-    def uri_from_parts(parts)
-      binding.pry
-      File.join @base_uri, *parts.compact.map(&:to_s)
+    def uri
+      location = File.join @base_uri, path
+
+      if extension
+        location = "#{location}.#{extension}"
+      end
+
+      location
+    end
+
+    def path_from_parts(*parts)
+      File.join(path, parts.compact.map(&:to_s)).gsub(/\/*$/, '')
     end
 
     def execute_before_requests(action)
