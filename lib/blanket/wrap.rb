@@ -151,14 +151,13 @@ module Blanket
 
     private
     def method_missing(method, *args, &block)
-      if self.class.before_requests.any? { |h| h[:callback] == method }
-        raise "Missing callback #{method}"
-      end
+      # if self.class.before_requests.any? { |request_path, config| config[:method] == method }
+      #   raise "Missing callback #{method}"
+      # end
 
-      if self.class.after_requests.any? { |h| h[:callback] == method }
-        raise "Missing callback #{method}"
-      end
-
+      # if self.class.after_requests.any? { |request_path, config| config[:method] == method }
+      #   raise "Missing callback #{method}"
+      # end
 
       self.class.new @base_uri, {
         headers: @headers,
