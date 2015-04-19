@@ -135,7 +135,6 @@ module Blanket
     # @return [Blanket] The Blanket object wrapping the API
     def initialize(base_uri = nil, options = {})
       @base_uri = base_uri || self.class.base_uri
-      # @uri_parts = []
       @headers = self.class.base_headers.merge options[:headers] || {}
       @params = self.class.base_params.merge options[:params] || {}
       @extension = options[:extension] || self.class.base_extension
