@@ -54,16 +54,26 @@ module Blanket
       #   @base_background_job = j
       # end
 
-      def before_request(callback, *actions)
-        self.before_requests << { :callback => callback, :actions => actions }
+      def before_request(method, options = {})
+        request_path = options[:path] || ''
+        actions = options[:actions] || [:get, :post, :put, :delete]
+
+        actions.each do |action|
+          self.before_requests[request_path] ||= {}
+          self.before_requests[request_path][action] ||= []
+          self.before_requests[request_path][action] << method
+        end
       end
 
-      def after_request(callback, *actions)
-        self.after_requests << { :callback => callback, :actions => actions }
-      end
+      def after_request(method, options = {})
+        request_path = options[:path] || ''
+        actions = options[:actions] || [:get, :post, :put, :delete]
 
-      def perform_in_background(*actions)
-        self.background_actions.push(*actions)
+        actions.each do |action|
+          self.after_requests[request_path] ||= {}
+          self.after_requests[request_path][action] ||= []
+          self.after_requests[request_path][action] << method
+        end
       end
 
       private
@@ -92,9 +102,9 @@ module Blanket
       @base_headers = {}
       @base_params = {}
       @base_representers = {}
-      @before_requests = []
-      @after_requests = []
       @background_actions = []
+      @before_requests = {}
+      @after_requests = {}
 
       # Attribute accessor for HTTP Headers that
       # should be applied to all requests
@@ -263,17 +273,21 @@ module Blanket
     end
 
     def execute_before_requests(action)
-      self.class.before_requests.each do |action_callback|
-        if action_callback[:actions].include? action
-          send action_callback[:callback], action
+      self.class.before_requests.each do |path_string, config|
+        if path_match? path_string
+          methods = config[action]
+
+          return methods.each { |m| send m, action } if methods
         end
       end
     end
 
     def execute_after_requests(response, action)
-      self.class.after_requests.each do |action_callback|
-        if action_callback[:actions].include? action
-          send action_callback[:callback], response, action
+      self.class.after_requests.each do |path_string, config|
+        if path_match? path_string
+          methods = config[action]
+
+          return methods.each { |m| send m, response, action } if methods
         end
       end
     end
