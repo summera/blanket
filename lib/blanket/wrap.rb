@@ -19,7 +19,8 @@ module Blanket
         :base_adapter,
         :base_representer,
         :base_background_jobs,
-        :base_representers
+        :base_representers,
+        :base_delegates
 
       def uri(u)
         @base_uri = u
@@ -83,6 +84,23 @@ module Blanket
         end
       end
 
+      def delegate_action(*methods)
+        options = methods.pop
+        to = options[:to]
+        request_path = options[:path] || default_path_match
+        base_uri = options[:uri]
+        base_options = options[:options] || {}
+
+        methods.each do |method|
+          self.base_delegates[request_path] ||= {}
+          self.base_delegates[request_path][method] = {
+            :to => to,
+            :base_uri => base_uri,
+            :base_options => base_options
+          }
+        end
+      end
+
       private
       # @macro [attach] REST action
       #   @action $1()
@@ -99,6 +117,10 @@ module Blanket
 
           @path = path_from_parts id
 
+          # Pass request to delegate if exists
+          delegate = base_delegate action
+          return pass_action_to_delegate delegate, action, id, options, &block if delegate
+
           request action, options, &block
         end
       end
@@ -112,6 +134,7 @@ module Blanket
       @base_background_jobs = {}
       @before_requests = {}
       @after_requests = {}
+      @base_delegates = {}
       @default_path_match = /^$/
 
       # Attribute accessor for HTTP Headers that
@@ -212,6 +235,22 @@ module Blanket
       end
     end
 
+    def base_delegate(action)
+      self.class.base_delegates.each do |path_regex, config|
+        if path_match? path_regex
+          return config[action]
+        end
+      end
+
+      nil
+    end
+
+    def pass_action_to_delegate(delegate, action, id = nil, options = {}, &block)
+      delegate[:to].new(
+        delegate[:base_uri],
+        delegate[:base_options]
+      ).public_send action, id, options, &block
+    end
 
     def base_representer(action)
       self.class.base_representers.each do |path_regex, config|
