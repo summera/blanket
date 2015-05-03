@@ -9,7 +9,8 @@ module Blanket
 
     module ClassMethods
       attr_accessor :after_requests,
-        :before_requests
+        :before_requests,
+        :default_path_match
 
       attr_reader :base_headers,
         :base_uri,
@@ -41,7 +42,7 @@ module Blanket
       end
 
       def representer(klass, options = {})
-        request_path = options[:path] || ''
+        request_path = options[:path] || default_path_match
         actions = options[:actions] || [:get, :post, :put, :delete]
 
         actions.each do |action|
@@ -51,7 +52,7 @@ module Blanket
       end
 
       def background(klass, options = {})
-        request_path = options[:path] || ''
+        request_path = options[:path] || default_path_match
         actions = options[:actions] || [:get, :post, :put, :delete]
 
         actions.each do |action|
@@ -61,7 +62,7 @@ module Blanket
       end
 
       def before_request(method, options = {})
-        request_path = options[:path] || ''
+        request_path = options[:path] || default_path_match
         actions = options[:actions] || [:get, :post, :put, :delete]
 
         actions.each do |action|
@@ -72,7 +73,7 @@ module Blanket
       end
 
       def after_request(method, options = {})
-        request_path = options[:path] || ''
+        request_path = options[:path] || default_path_match
         actions = options[:actions] || [:get, :post, :put, :delete]
 
         actions.each do |action|
@@ -111,6 +112,7 @@ module Blanket
       @base_background_jobs = {}
       @before_requests = {}
       @after_requests = {}
+      @default_path_match = /^$/
 
       # Attribute accessor for HTTP Headers that
       # should be applied to all requests
@@ -197,16 +199,6 @@ module Blanket
       end
     end
 
-    def base_representer(action)
-      self.class.base_representers.each do |path_string, config|
-        if path_match? path_string
-          return config[action]
-        end
-      end
-
-      nil
-    end
-
     def request_options(options = {})
       new_options = options.dup
 
@@ -218,6 +210,17 @@ module Blanket
       new_options.reject do |_, value|
         value.nil? || value.empty? unless [true, false].include?(value)
       end
+    end
+
+
+    def base_representer(action)
+      self.class.base_representers.each do |path_regex, config|
+        if path_match? path_regex
+          return config[action]
+        end
+      end
+
+      nil
     end
 
     def classify_adapter
@@ -288,8 +291,8 @@ module Blanket
     end
 
     def execute_before_requests(action)
-      self.class.before_requests.each do |path_string, config|
-        if path_match? path_string
+      self.class.before_requests.each do |path_regex, config|
+        if path_match? path_regex
           methods = config[action]
 
           return methods.each { |m| send m, action } if methods
@@ -298,8 +301,8 @@ module Blanket
     end
 
     def execute_after_requests(response, action)
-      self.class.after_requests.each do |path_string, config|
-        if path_match? path_string
+      self.class.after_requests.each do |path_regex, config|
+        if path_match? path_regex
           methods = config[action]
 
           return methods.each { |m| send m, response, action } if methods
@@ -307,14 +310,13 @@ module Blanket
       end
     end
 
-    def path_match?(path_string)
-      regex = path_string.gsub(/:\w+/, '\w+')
-      Regexp.new(regex) === path
+    def path_match?(path_regex)
+      path_regex === path
     end
 
     def base_job(action)
-      self.class.base_background_jobs.each do |path_string, config|
-        if path_match? path_string
+      self.class.base_background_jobs.each do |path_regex, config|
+        if path_match? path_regex
           return config[action]
         end
       end
